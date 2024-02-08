@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+
+	"github.com/joho/godotenv"
 )
 
 type LibraryResponse struct {
@@ -38,7 +40,12 @@ type Library struct {
 }
 
 func main() {
-	authKey := "cd8788b75f612015c9aa389baafaebd129dbcea9c7c4b30f3ec0b1c98bbac570"
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	authKey := os.Getenv("AUTH_KEY")
 	pageNo := 1
 	pageSize := 30
 	apiURL := fmt.Sprintf("https://data4library.kr/api/libSrch?authKey=%s&pageSize=%d", authKey, pageSize)
