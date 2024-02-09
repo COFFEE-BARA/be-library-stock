@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/csv"
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
@@ -10,7 +9,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/joho/godotenv"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
 
 type LibraryResponse struct {
@@ -40,27 +41,19 @@ type Library struct {
 }
 
 func main() {
-	err := godotenv.Load()
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String(os.Getenv("REGION")),
+	})
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Fatal("Error creating session:", err)
 	}
+
+	svc := dynamodb.New(sess)
 
 	authKey := os.Getenv("AUTH_KEY")
 	pageNo := 1
 	pageSize := 30
 	apiURL := fmt.Sprintf("https://data4library.kr/api/libSrch?authKey=%s&pageSize=%d", authKey, pageSize)
-
-	file, err := os.Create("library-stock.csv")
-	if err != nil {
-		log.Fatal("Cannot create file", err)
-	}
-	defer file.Close()
-
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	headers := []string{"Library Code", "Library Name", "Latitude", "Longitude"}
-	writer.Write(headers)
 
 	for {
 		response, err := http.Get(apiURL + "&pageNo=" + strconv.Itoa(pageNo))
@@ -74,7 +67,6 @@ func main() {
 
 		var libraryResponse LibraryResponse
 
-		// XML 언마샬링 (XML을 구조체로 파싱)
 		err = xml.Unmarshal(byteValue, &libraryResponse)
 		if err != nil {
 			fmt.Println("XML 파싱 오류:", err)
@@ -82,13 +74,29 @@ func main() {
 		}
 
 		for _, lib := range libraryResponse.Libraries.Libraries {
-			row := []string{
-				strconv.Itoa(lib.LibCode),
-				lib.LibName,
-				lib.Latitude,
-				lib.Longitude,
+			input := &dynamodb.PutItemInput{
+				Item: map[string]*dynamodb.AttributeValue{
+					"LibCode": {
+						N: aws.String(strconv.Itoa(lib.LibCode)),
+					},
+					"LibName": {
+						S: aws.String(lib.LibName),
+					},
+					"Latitude": {
+						S: aws.String(lib.Latitude),
+					},
+					"Longitude": {
+						S: aws.String(lib.Longitude),
+					},
+				},
+				TableName: aws.String(os.Getenv("TABLE_NAME")),
 			}
-			writer.Write(row)
+
+			_, err = svc.PutItem(input)
+			if err != nil {
+				fmt.Println("Error writing to DynamoDB:", err)
+				return
+			}
 		}
 
 		if libraryResponse.PageNo*pageSize >= libraryResponse.NumFound {
@@ -98,5 +106,5 @@ func main() {
 		pageNo++
 	}
 
-	fmt.Println("CSV 파일이 성공적으로 생성되었습니다.")
+	fmt.Println("데이터가 성공적으로 DynamoDB에 저장되었습니다.")
 }
