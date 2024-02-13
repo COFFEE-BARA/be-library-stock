@@ -12,11 +12,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/joho/godotenv"
 )
 
 type LibraryResponse struct {
-	XMLName   xml.Name `xml:"response"`
-	Request   Request
+	XMLName   xml.Name  `xml:"response"`
+	Request   Request   `xml:"request"`
 	PageNo    int       `xml:"pageNo"`
 	PageSize  int       `xml:"pageSize"`
 	NumFound  int       `xml:"numFound"`
@@ -41,6 +42,11 @@ type Library struct {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(os.Getenv("REGION")),
 	})
@@ -51,6 +57,7 @@ func main() {
 	svc := dynamodb.New(sess)
 
 	authKey := os.Getenv("AUTH_KEY")
+	fmt.Println(authKey)
 	pageNo := 1
 	pageSize := 30
 	apiURL := fmt.Sprintf("https://data4library.kr/api/libSrch?authKey=%s&pageSize=%d", authKey, pageSize)
@@ -72,6 +79,7 @@ func main() {
 			fmt.Println("XML 파싱 오류:", err)
 			return
 		}
+		fmt.Println(libraryResponse)
 
 		for _, lib := range libraryResponse.Libraries.Libraries {
 			input := &dynamodb.PutItemInput{
