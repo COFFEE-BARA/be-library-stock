@@ -76,16 +76,16 @@ func main() {
 		for _, lib := range libraryResponse.Libraries.Libraries {
 			input := &dynamodb.PutItemInput{
 				Item: map[string]*dynamodb.AttributeValue{
-					"LibCode": {
-						N: aws.String(strconv.Itoa(lib.LibCode)),
+					"libCode": {
+						S: aws.String(strconv.Itoa(lib.LibCode)),
 					},
-					"LibName": {
+					"libName": {
 						S: aws.String(lib.LibName),
 					},
-					"Latitude": {
+					"latitude": {
 						S: aws.String(lib.Latitude),
 					},
-					"Longitude": {
+					"longitude": {
 						S: aws.String(lib.Longitude),
 					},
 				},
