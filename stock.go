@@ -60,10 +60,10 @@ func main() {
 	var lib []LibraryInfo
 	lib = callAPIs(libraries, "9788956609959")
 
-	fmt.Println(len(lib))
-	for _, info := range lib {
-		fmt.Printf("%s | ", info.LibCode)
-	}
+	// 이제 lib 배열을 프론트엔드로 넘겨줘야함
+	// for _, info := range lib {
+	// 	fmt.Printf("%s | ", info.LibCode)
+	// }
 }
 
 func loadEnv() {
