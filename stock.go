@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -16,17 +18,11 @@ import (
 
 type BookExistResponse struct {
 	XMLName xml.Name `xml:"response"`
-	Request Request  `xml:"request"`
 	Result  Result   `xml:"result"`
 }
 
-type Request struct {
-	Isbn    string `xml:"isbn13"`
-	LibCode string `xml:"libCode"`
-}
-
 type Result struct {
-	HasBook       string `xml:"hasBook"`
+	// HasBook       string `xml:"hasBook"`
 	LoanAvailable string `xml:"loanAvailable"`
 }
 
@@ -35,6 +31,10 @@ type LibraryInfo struct {
 	Latitude  string
 	Longitude string
 }
+
+// apiURL에 dynamodb에서 받아온 libCode랑 프론트에서 받아온 isbn으로 loan 반환값이 Y인지 확인하고
+// Y인 배열만 모아서 프론트로 전달
+// 이때 이 배열 안에는 libCode, libName, latitude, longitude가 전달되어야 함
 
 func main() {
 	loadEnv()
@@ -49,28 +49,28 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// apiURL에 dynamodb에서 받아온 libCode랑 프론트에서 받아온 isbn으로 loan 반환값이 Y인지 확인하고
-	// Y인 배열만 모아서 프론트로 전달
-	// 이때 이 배열 안에는 libCode, libName, latitude, longitude가 전달되어야 함
-	var loanAvailableLibraries []LibraryInfo
-	count := 0
+	// count := 0
+	var libraries []LibraryInfo
 	for _, item := range result.Items {
-		if *item["libCode"].S == "129226" {
-			break
+		// if count > 800 {
+		// 	break
+		// }
+		libInfo := LibraryInfo{
+			LibCode:   *item["libCode"].S,
+			Latitude:  *item["latitude"].S,
+			Longitude: *item["longitude"].S,
 		}
-		if callAPI(item["libCode"], "9791191056556") { // isbn 프론트에서 받아오는 코드로 변경해야 함
-			libInfo := LibraryInfo{
-				LibCode:   *item["libCode"].S,
-				Latitude:  *item["latitude"].S,
-				Longitude: *item["longitude"].S,
-			}
-			loanAvailableLibraries = append(loanAvailableLibraries, libInfo)
-		}
-		count++
+		libraries = append(libraries, libInfo)
+		// count++
 	}
 
-	fmt.Println(loanAvailableLibraries)
-	fmt.Println(count)
+	var lib []LibraryInfo
+	lib = callAPIs(libraries, "9791193506202")
+
+	fmt.Println(len(lib))
+	for _, info := range lib {
+		fmt.Println(info.LibCode)
+	}
 }
 
 func loadEnv() {
@@ -85,7 +85,7 @@ func createNewSession() (*session.Session, error) {
 		Region: aws.String(os.Getenv("REGION")),
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error scanning createNewSession: %v", err)
 	}
 	return sess, nil
 }
@@ -106,10 +106,10 @@ func scanDynamoDB(sess *session.Session) (*dynamodb.ScanOutput, error) {
 	return result, nil
 }
 
-func callAPI(libCode *dynamodb.AttributeValue, isbn string) bool {
+func callAPI(libCode string, isbn string) bool {
 	authKey := os.Getenv("AUTH_KEY")
-	libCodeStr := *libCode.S
-	apiURL := fmt.Sprintf("https://data4library.kr/api/bookExist?authKey=%s&libCode=%s&isbn13=%s", authKey, libCodeStr, isbn)
+	// libCodeStr := *libCode.S
+	apiURL := fmt.Sprintf("https://data4library.kr/api/bookExist?authKey=%s&libCode=%s&isbn13=%s", authKey, libCode, isbn)
 
 	response, err := http.Get(apiURL)
 	if err != nil {
@@ -122,10 +122,43 @@ func callAPI(libCode *dynamodb.AttributeValue, isbn string) bool {
 	var bookExistResponse BookExistResponse
 
 	err = xml.Unmarshal(byteValue, &bookExistResponse)
+
 	if err != nil {
 		log.Fatal("Error parsing XML:", err)
 	}
 
 	return bookExistResponse.Result.LoanAvailable == "Y"
 
+}
+
+func callAPIs(libraries []LibraryInfo, isbn string) []LibraryInfo {
+	ch := make(chan LibraryInfo)
+
+	var wg sync.WaitGroup
+	for _, library := range libraries {
+		wg.Add(1)
+
+		go func(libCode string) {
+			defer wg.Done()
+
+			time.Sleep(500 * time.Millisecond)
+			if callAPI(library.LibCode, isbn) {
+				ch <- library
+			}
+		}(library.LibCode)
+	}
+
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	var loanAvailableLibraries []LibraryInfo
+	for libInfo := range ch {
+		if libInfo.LibCode != "" {
+			loanAvailableLibraries = append(loanAvailableLibraries, libInfo)
+		}
+	}
+
+	return loanAvailableLibraries
 }
