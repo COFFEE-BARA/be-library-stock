@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -22,7 +21,6 @@ type BookExistResponse struct {
 }
 
 type Result struct {
-	// HasBook       string `xml:"hasBook"`
 	LoanAvailable string `xml:"loanAvailable"`
 }
 
@@ -49,27 +47,22 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// count := 0
 	var libraries []LibraryInfo
 	for _, item := range result.Items {
-		// if count > 800 {
-		// 	break
-		// }
 		libInfo := LibraryInfo{
 			LibCode:   *item["libCode"].S,
 			Latitude:  *item["latitude"].S,
 			Longitude: *item["longitude"].S,
 		}
 		libraries = append(libraries, libInfo)
-		// count++
 	}
 
 	var lib []LibraryInfo
-	lib = callAPIs(libraries, "9791193506202")
+	lib = callAPIs(libraries, "9788956609959")
 
 	fmt.Println(len(lib))
 	for _, info := range lib {
-		fmt.Println(info.LibCode)
+		fmt.Printf("%s | ", info.LibCode)
 	}
 }
 
@@ -108,7 +101,6 @@ func scanDynamoDB(sess *session.Session) (*dynamodb.ScanOutput, error) {
 
 func callAPI(libCode string, isbn string) bool {
 	authKey := os.Getenv("AUTH_KEY")
-	// libCodeStr := *libCode.S
 	apiURL := fmt.Sprintf("https://data4library.kr/api/bookExist?authKey=%s&libCode=%s&isbn13=%s", authKey, libCode, isbn)
 
 	response, err := http.Get(apiURL)
@@ -141,9 +133,8 @@ func callAPIs(libraries []LibraryInfo, isbn string) []LibraryInfo {
 		go func(libCode string) {
 			defer wg.Done()
 
-			time.Sleep(500 * time.Millisecond)
 			if callAPI(library.LibCode, isbn) {
-				ch <- library
+				ch <- LibraryInfo{LibCode: libCode}
 			}
 		}(library.LibCode)
 	}
