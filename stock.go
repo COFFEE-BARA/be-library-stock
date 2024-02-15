@@ -18,7 +18,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/joho/godotenv"
 )
 
 type BookExistResponse struct {
@@ -57,7 +56,7 @@ func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (e
 		Longitude: lon,
 	}
 
-	loadEnv()
+	// loadEnv()
 
 	sess, err := createNewSession()
 	if err != nil {
@@ -88,12 +87,12 @@ func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (e
 	}, nil
 }
 
-func loadEnv() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-}
+// func loadEnv() {
+// 	err := godotenv.Load()
+// 	if err != nil {
+// 		log.Fatal("Error loading .env file")
+// 	}
+// }
 
 func createNewSession() (*session.Session, error) {
 	sess, err := session.NewSession(&aws.Config{
