@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
@@ -11,6 +13,8 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -41,15 +45,9 @@ type Location struct {
 // Y인 배열만 모아서 프론트로 전달
 // 이때 이 배열 안에는 libCode, libName, latitude, longitude가 전달되어야 함
 
-func main() {
-	http.HandleFunc("/api/book/9788956609959/lending-library", httpHandler)
-
-	log.Fatal(http.ListenAndServe(":8000", nil))
-}
-
-func httpHandler(w http.ResponseWriter, r *http.Request) {
-	latStr := r.FormValue("lat")
-	lonStr := r.FormValue("lon")
+func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	latStr := request.QueryStringParameters["lat"]
+	lonStr := request.QueryStringParameters["lon"]
 
 	lat, _ := strconv.ParseFloat(latStr, 64)
 	lon, _ := strconv.ParseFloat(lonStr, 64)
@@ -59,51 +57,35 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		Longitude: lon,
 	}
 
-	connectDynamoDB(location)
-
-	fmt.Fprintf(w, "Received location data: Latitude=%f, Longitude=%f", location.Latitude, location.Longitude)
-}
-
-func connectDynamoDB(location Location) {
 	loadEnv()
 
 	sess, err := createNewSession()
 	if err != nil {
-		log.Fatal("Error creating session:", err)
+		log.Println("Error creating session:", err)
+		return events.APIGatewayProxyResponse{StatusCode: 500}, err
 	}
 
 	result, err := scanDynamoDB(sess)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return events.APIGatewayProxyResponse{StatusCode: 500}, err
 	}
 
-	libraryHandler(result, location)
-}
+	libraries := libraryHandler(result, location)
 
-func libraryHandler(result *dynamodb.ScanOutput, location Location) {
-	var libraries []LibraryInfo
-	for _, item := range result.Items {
-		distance := calculateDistance(location, *item["latitude"].S, *item["longitude"].S)
-
-		if distance <= 30 {
-			libInfo := LibraryInfo{
-				LibCode:   *item["libCode"].S,
-				Latitude:  *item["latitude"].S,
-				Longitude: *item["longitude"].S,
-			}
-			libraries = append(libraries, libInfo)
-		}
-
+	responseBody, err := json.Marshal(libraries)
+	if err != nil {
+		log.Println("Error marshalling JSON:", err)
+		return events.APIGatewayProxyResponse{StatusCode: 500}, err
 	}
-	fmt.Println("len(libraries): ", len(libraries))
 
-	var lib []LibraryInfo
-	lib = callAPIs(libraries, "9788956609959")
-
-	// 이제 lib 배열을 프론트엔드로 넘겨줘야함
-	for _, info := range lib {
-		fmt.Printf("%s | ", info.LibCode)
-	}
+	return events.APIGatewayProxyResponse{
+		StatusCode: 200,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		Body: string(responseBody),
+	}, nil
 }
 
 func loadEnv() {
@@ -139,6 +121,30 @@ func scanDynamoDB(sess *session.Session) (*dynamodb.ScanOutput, error) {
 	return result, nil
 }
 
+func libraryHandler(result *dynamodb.ScanOutput, location Location) []LibraryInfo {
+	var libraries []LibraryInfo
+	for _, item := range result.Items {
+		distance := calculateDistance(location, *item["latitude"].S, *item["longitude"].S)
+
+		if distance <= 30 {
+			libInfo := LibraryInfo{
+				LibCode:   *item["libCode"].S,
+				Latitude:  *item["latitude"].S,
+				Longitude: *item["longitude"].S,
+			}
+			libraries = append(libraries, libInfo)
+		}
+
+	}
+	fmt.Println("len(libraries): ", len(libraries))
+
+	var lib []LibraryInfo
+	lib = callAPIs(libraries, "9788956609959")
+
+	// 프론트엔드에 전달할 라이브러리 정보 반환
+	return lib
+}
+
 func calculateDistance(location Location, latitude string, longitude string) float64 {
 	lat1 := location.Latitude
 	lon1 := location.Longitude
@@ -160,6 +166,89 @@ func calculateDistance(location Location, latitude string, longitude string) flo
 
 	return distance
 }
+
+func main() {
+	lambda.Start(EventHandler)
+	// http.HandleFunc("/api/book/9788956609959/lending-library", receiveHandler)
+
+	// log.Fatal(http.ListenAndServe(":8000", nil))
+}
+
+// func receiveHandler(w http.ResponseWriter, r *http.Request) {
+// 	latStr := r.FormValue("lat")
+// 	lonStr := r.FormValue("lon")
+
+// 	lat, _ := strconv.ParseFloat(latStr, 64)
+// 	lon, _ := strconv.ParseFloat(lonStr, 64)
+
+// 	location := Location{
+// 		Latitude:  lat,
+// 		Longitude: lon,
+// 	}
+
+// 	connectDynamoDB(location)
+
+// 	fmt.Fprintf(w, "Received location data: Latitude=%f, Longitude=%f", location.Latitude, location.Longitude)
+// }
+
+// func connectDynamoDB(location Location) {
+// 	loadEnv()
+
+// 	sess, err := createNewSession()
+// 	if err != nil {
+// 		log.Fatal("Error creating session:", err)
+// 	}
+
+// 	result, err := scanDynamoDB(sess)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+
+// 	libraryHandler(result, location)
+// }
+
+// func libraryHandler(result *dynamodb.ScanOutput, location Location) {
+// 	var libraries []LibraryInfo
+// 	for _, item := range result.Items {
+// 		distance := calculateDistance(location, *item["latitude"].S, *item["longitude"].S)
+
+// 		if distance <= 30 {
+// 			libInfo := LibraryInfo{
+// 				LibCode:   *item["libCode"].S,
+// 				Latitude:  *item["latitude"].S,
+// 				Longitude: *item["longitude"].S,
+// 			}
+// 			libraries = append(libraries, libInfo)
+// 		}
+
+// 	}
+// 	fmt.Println("len(libraries): ", len(libraries))
+
+// 	var lib []LibraryInfo
+// 	lib = callAPIs(libraries, "9788956609959")
+
+// 	http.HandleFunc("/api/book/9788956609959/lending-library", func(w http.ResponseWriter, r *http.Request) {
+// 		sendHandler(w, r, lib)
+// 	})
+
+// 	log.Fatal(http.ListenAndServe(":8000", nil))
+
+// 	// 이제 lib 배열을 프론트엔드로 넘겨줘야함
+// 	// for _, info := range lib {
+// 	// 	fmt.Printf("%s | ", info.LibCode)
+// 	// }
+// }
+
+// func sendHandler(w http.ResponseWriter, r *http.Request, lib []LibraryInfo) {
+// 	jsonData, err := json.Marshal(lib)
+// 	if err != nil {
+// 		http.Error(w, "Failed to marshal JSON", http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.Write(jsonData)
+// }
 
 func callAPI(libCode string, isbn string) bool {
 	authKey := os.Getenv("AUTH_KEY")
