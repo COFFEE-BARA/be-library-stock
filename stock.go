@@ -42,16 +42,29 @@ type Location struct {
 // 이때 이 배열 안에는 libCode, libName, latitude, longitude가 전달되어야 함
 
 func main() {
+	http.HandleFunc("/api/book/9788956609959/lending-library", httpHandler)
+
+	log.Fatal(http.ListenAndServe(":8000", nil))
+}
+
+func httpHandler(w http.ResponseWriter, r *http.Request) {
+	latStr := r.FormValue("lat")
+	lonStr := r.FormValue("lon")
+
+	lat, _ := strconv.ParseFloat(latStr, 64)
+	lon, _ := strconv.ParseFloat(lonStr, 64)
+
 	location := Location{
-		Latitude:  37.5666103,
-		Longitude: 126.9783882,
+		Latitude:  lat,
+		Longitude: lon,
 	}
 
-	http.HandleFunc("/api/book/9788956609959/lending-library", func(w http.ResponseWriter, r *http.Request) {
-		lendingLibraryHandler(w, r, location)
-	})
+	connectDynamoDB(location)
 
-	fmt.Println(location.Latitude, location.Longitude)
+	fmt.Fprintf(w, "Received location data: Latitude=%f, Longitude=%f", location.Latitude, location.Longitude)
+}
+
+func connectDynamoDB(location Location) {
 	loadEnv()
 
 	sess, err := createNewSession()
@@ -64,6 +77,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	libraryHandler(result, location)
+}
+
+func libraryHandler(result *dynamodb.ScanOutput, location Location) {
 	var libraries []LibraryInfo
 	for _, item := range result.Items {
 		distance := calculateDistance(location, *item["latitude"].S, *item["longitude"].S)
@@ -87,35 +104,6 @@ func main() {
 	for _, info := range lib {
 		fmt.Printf("%s | ", info.LibCode)
 	}
-
-	log.Fatal(http.ListenAndServe(":8000", nil))
-}
-
-func lendingLibraryHandler(w http.ResponseWriter, r *http.Request, location Location) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	latStr := r.FormValue("lat")
-	lonStr := r.FormValue("long")
-
-	lat, err := strconv.ParseFloat(latStr, 64)
-	if err != nil {
-		http.Error(w, "Invalid latitude", http.StatusBadRequest)
-		return
-	}
-
-	long, err := strconv.ParseFloat(lonStr, 64)
-	if err != nil {
-		http.Error(w, "Invalid longitude", http.StatusBadRequest)
-		return
-	}
-
-	location.Latitude = lat
-	location.Longitude = long
-
-	fmt.Fprintf(w, "Received location data: lat=%f, long=%f", location.Latitude, location.Longitude)
 }
 
 func loadEnv() {
