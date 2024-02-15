@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -30,11 +32,26 @@ type LibraryInfo struct {
 	Longitude string
 }
 
+type Location struct {
+	Latitude  float64
+	Longitude float64
+}
+
 // apiURL에 dynamodb에서 받아온 libCode랑 프론트에서 받아온 isbn으로 loan 반환값이 Y인지 확인하고
 // Y인 배열만 모아서 프론트로 전달
 // 이때 이 배열 안에는 libCode, libName, latitude, longitude가 전달되어야 함
 
 func main() {
+	location := Location{
+		Latitude:  37.5666103,
+		Longitude: 126.9783882,
+	}
+
+	http.HandleFunc("/api/book/9788956609959/lending-library", func(w http.ResponseWriter, r *http.Request) {
+		lendingLibraryHandler(w, r, location)
+	})
+
+	fmt.Println(location.Latitude, location.Longitude)
 	loadEnv()
 
 	sess, err := createNewSession()
@@ -49,13 +66,19 @@ func main() {
 
 	var libraries []LibraryInfo
 	for _, item := range result.Items {
-		libInfo := LibraryInfo{
-			LibCode:   *item["libCode"].S,
-			Latitude:  *item["latitude"].S,
-			Longitude: *item["longitude"].S,
+		distance := calculateDistance(location, *item["latitude"].S, *item["longitude"].S)
+
+		if distance <= 30 {
+			libInfo := LibraryInfo{
+				LibCode:   *item["libCode"].S,
+				Latitude:  *item["latitude"].S,
+				Longitude: *item["longitude"].S,
+			}
+			libraries = append(libraries, libInfo)
 		}
-		libraries = append(libraries, libInfo)
+
 	}
+	fmt.Println("len(libraries): ", len(libraries))
 
 	var lib []LibraryInfo
 	lib = callAPIs(libraries, "9788956609959")
@@ -64,6 +87,35 @@ func main() {
 	for _, info := range lib {
 		fmt.Printf("%s | ", info.LibCode)
 	}
+
+	log.Fatal(http.ListenAndServe(":8000", nil))
+}
+
+func lendingLibraryHandler(w http.ResponseWriter, r *http.Request, location Location) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	latStr := r.FormValue("lat")
+	lonStr := r.FormValue("long")
+
+	lat, err := strconv.ParseFloat(latStr, 64)
+	if err != nil {
+		http.Error(w, "Invalid latitude", http.StatusBadRequest)
+		return
+	}
+
+	long, err := strconv.ParseFloat(lonStr, 64)
+	if err != nil {
+		http.Error(w, "Invalid longitude", http.StatusBadRequest)
+		return
+	}
+
+	location.Latitude = lat
+	location.Longitude = long
+
+	fmt.Fprintf(w, "Received location data: lat=%f, long=%f", location.Latitude, location.Longitude)
 }
 
 func loadEnv() {
@@ -97,6 +149,28 @@ func scanDynamoDB(sess *session.Session) (*dynamodb.ScanOutput, error) {
 	}
 
 	return result, nil
+}
+
+func calculateDistance(location Location, latitude string, longitude string) float64 {
+	lat1 := location.Latitude
+	lon1 := location.Longitude
+	lat2, _ := strconv.ParseFloat(latitude, 64)
+	lon2, _ := strconv.ParseFloat(longitude, 64)
+
+	const earthRadius = 6371
+
+	lat1 = lat1 * math.Pi / 180
+	lon1 = lon1 * math.Pi / 180
+	lat2 = lat2 * math.Pi / 180
+	lon2 = lon2 * math.Pi / 180
+
+	dlon := lon2 - lon1
+	dlat := lat2 - lat1
+	a := math.Pow(math.Sin(dlat/2), 2) + math.Cos(lat1)*math.Cos(lat2)*math.Pow(math.Sin(dlon/2), 2)
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+	distance := earthRadius * c
+
+	return distance
 }
 
 func callAPI(libCode string, isbn string) bool {
