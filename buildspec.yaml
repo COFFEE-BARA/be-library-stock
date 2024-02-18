@@ -11,7 +11,7 @@ phases:
     commands:
       - echo Building the Docker image...          
       - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
-      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AREGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG      
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG      
   post_build:
     commands:
       - echo Pushing the Docker image...
@@ -34,4 +34,4 @@ phases:
           echo "Lambda function is Active. Waiting additional time before proceeding with update..."
           sleep 30
         fi
-        - aws lambda update-function-configuration --function-name naver_book_crawler --environment "Variables={REGION=$REGION, AUTH_KEY=$AUTH_KEY, TABLE_NAME=$TABLE_NAME}"
+        - aws lambda update-function-configuration --function-name smwu-004-get-lending-library --environment "Variables={REGION=$REGION, AUTH_KEY=$AUTH_KEY, TABLE_NAME=$TABLE_NAME}"
