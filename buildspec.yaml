@@ -11,7 +11,7 @@ phases:
     commands:
       - echo Building the Docker image...          
       - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
-      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG 629515838455.dkr.ecr.ap-northeast-2.amazonaws.com/smwu-004-ecr-get-lending-library:latest
+      - docker tag smwu-004-ecr-get-lending-library:latest 629515838455.dkr.ecr.ap-northeast-2.amazonaws.com/smwu-004-ecr-get-lending-library:latest
   post_build:
     commands:
       - echo Pushing the Docker image...
