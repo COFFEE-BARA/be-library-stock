@@ -42,14 +42,12 @@ type Location struct {
 
 func main() {
 	lambda.Start(EventHandler)
-	// http.HandleFunc("/api/book/9788956609959/lending-library", receiveHandler)
-
-	// log.Fatal(http.ListenAndServe(":8000", nil))
 }
 
 func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	lat := request.QueryStringParameters["lat"]
 	lon := request.QueryStringParameters["lon"]
+	isbn := request.QueryStringParameters["isbn"]
 
 	location := Location{
 		Latitude:  lat,
@@ -70,7 +68,7 @@ func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (e
 		return events.APIGatewayProxyResponse{StatusCode: 500}, err
 	}
 
-	libraries := libraryHandler(result, location)
+	libraries := libraryHandler(result, location, isbn)
 
 	responseBody, err := json.Marshal(libraries)
 	if err != nil {
@@ -120,7 +118,7 @@ func scanDynamoDB(sess *session.Session) (*dynamodb.ScanOutput, error) {
 	return result, nil
 }
 
-func libraryHandler(result *dynamodb.ScanOutput, location Location) []LibraryInfo {
+func libraryHandler(result *dynamodb.ScanOutput, location Location, isbn string) []LibraryInfo {
 	var libraries []LibraryInfo
 	for _, item := range result.Items {
 		libCode := *item["libCode"].S
@@ -141,7 +139,7 @@ func libraryHandler(result *dynamodb.ScanOutput, location Location) []LibraryInf
 	}
 
 	var lib []LibraryInfo
-	lib = callAPIs(libraries, "9788956609959")
+	lib = callAPIs(libraries, isbn)
 
 	// 프론트엔드에 전달할 라이브러리 정보 반환
 	fmt.Println("---result---")
