@@ -36,20 +36,20 @@ type LibraryInfo struct {
 }
 
 type Location struct {
-	Latitude  float64
-	Longitude float64
+	Latitude  string
+	Longitude string
 }
 
-// apiURL에 dynamodb에서 받아온 libCode랑 프론트에서 받아온 isbn으로 loan 반환값이 Y인지 확인하고
-// Y인 배열만 모아서 프론트로 전달
-// 이때 이 배열 안에는 libCode, libName, latitude, longitude가 전달되어야 함
+func main() {
+	lambda.Start(EventHandler)
+	// http.HandleFunc("/api/book/9788956609959/lending-library", receiveHandler)
+
+	// log.Fatal(http.ListenAndServe(":8000", nil))
+}
 
 func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	latStr := request.QueryStringParameters["lat"]
-	lonStr := request.QueryStringParameters["lon"]
-
-	lat, _ := strconv.ParseFloat(latStr, 64)
-	lon, _ := strconv.ParseFloat(lonStr, 64)
+	lat := request.QueryStringParameters["lat"]
+	lon := request.QueryStringParameters["lon"]
 
 	location := Location{
 		Latitude:  lat,
@@ -123,30 +123,36 @@ func scanDynamoDB(sess *session.Session) (*dynamodb.ScanOutput, error) {
 func libraryHandler(result *dynamodb.ScanOutput, location Location) []LibraryInfo {
 	var libraries []LibraryInfo
 	for _, item := range result.Items {
-		distance := calculateDistance(location, *item["latitude"].S, *item["longitude"].S)
+		libCode := *item["libCode"].S
+		latitude := *item["latitude"].S
+		longitude := *item["longitude"].S
+		fmt.Println(libCode, latitude, longitude)
+		distance := calculateDistance(location, latitude, longitude)
 
 		if distance <= 30 {
 			libInfo := LibraryInfo{
-				LibCode:   *item["libCode"].S,
-				Latitude:  *item["latitude"].S,
-				Longitude: *item["longitude"].S,
+				LibCode:   libCode,
+				Latitude:  latitude,
+				Longitude: longitude,
 			}
 			libraries = append(libraries, libInfo)
 		}
 
 	}
-	fmt.Println("len(libraries): ", len(libraries))
 
 	var lib []LibraryInfo
 	lib = callAPIs(libraries, "9788956609959")
 
 	// 프론트엔드에 전달할 라이브러리 정보 반환
+	fmt.Println("---result---")
+	fmt.Println(lib)
+	fmt.Println(len(lib))
 	return lib
 }
 
 func calculateDistance(location Location, latitude string, longitude string) float64 {
-	lat1 := location.Latitude
-	lon1 := location.Longitude
+	lat1, _ := strconv.ParseFloat(location.Latitude, 64)
+	lon1, _ := strconv.ParseFloat(location.Longitude, 64)
 	lat2, _ := strconv.ParseFloat(latitude, 64)
 	lon2, _ := strconv.ParseFloat(longitude, 64)
 
@@ -165,89 +171,6 @@ func calculateDistance(location Location, latitude string, longitude string) flo
 
 	return distance
 }
-
-func main() {
-	lambda.Start(EventHandler)
-	// http.HandleFunc("/api/book/9788956609959/lending-library", receiveHandler)
-
-	// log.Fatal(http.ListenAndServe(":8000", nil))
-}
-
-// func receiveHandler(w http.ResponseWriter, r *http.Request) {
-// 	latStr := r.FormValue("lat")
-// 	lonStr := r.FormValue("lon")
-
-// 	lat, _ := strconv.ParseFloat(latStr, 64)
-// 	lon, _ := strconv.ParseFloat(lonStr, 64)
-
-// 	location := Location{
-// 		Latitude:  lat,
-// 		Longitude: lon,
-// 	}
-
-// 	connectDynamoDB(location)
-
-// 	fmt.Fprintf(w, "Received location data: Latitude=%f, Longitude=%f", location.Latitude, location.Longitude)
-// }
-
-// func connectDynamoDB(location Location) {
-// 	loadEnv()
-
-// 	sess, err := createNewSession()
-// 	if err != nil {
-// 		log.Fatal("Error creating session:", err)
-// 	}
-
-// 	result, err := scanDynamoDB(sess)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	libraryHandler(result, location)
-// }
-
-// func libraryHandler(result *dynamodb.ScanOutput, location Location) {
-// 	var libraries []LibraryInfo
-// 	for _, item := range result.Items {
-// 		distance := calculateDistance(location, *item["latitude"].S, *item["longitude"].S)
-
-// 		if distance <= 30 {
-// 			libInfo := LibraryInfo{
-// 				LibCode:   *item["libCode"].S,
-// 				Latitude:  *item["latitude"].S,
-// 				Longitude: *item["longitude"].S,
-// 			}
-// 			libraries = append(libraries, libInfo)
-// 		}
-
-// 	}
-// 	fmt.Println("len(libraries): ", len(libraries))
-
-// 	var lib []LibraryInfo
-// 	lib = callAPIs(libraries, "9788956609959")
-
-// 	http.HandleFunc("/api/book/9788956609959/lending-library", func(w http.ResponseWriter, r *http.Request) {
-// 		sendHandler(w, r, lib)
-// 	})
-
-// 	log.Fatal(http.ListenAndServe(":8000", nil))
-
-// 	// 이제 lib 배열을 프론트엔드로 넘겨줘야함
-// 	// for _, info := range lib {
-// 	// 	fmt.Printf("%s | ", info.LibCode)
-// 	// }
-// }
-
-// func sendHandler(w http.ResponseWriter, r *http.Request, lib []LibraryInfo) {
-// 	jsonData, err := json.Marshal(lib)
-// 	if err != nil {
-// 		http.Error(w, "Failed to marshal JSON", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.Write(jsonData)
-// }
 
 func callAPI(libCode string, isbn string) bool {
 	authKey := os.Getenv("AUTH_KEY")
@@ -280,13 +203,13 @@ func callAPIs(libraries []LibraryInfo, isbn string) []LibraryInfo {
 	for _, library := range libraries {
 		wg.Add(1)
 
-		go func(libCode string) {
+		go func(lib LibraryInfo) {
 			defer wg.Done()
 
-			if callAPI(library.LibCode, isbn) {
-				ch <- LibraryInfo{LibCode: libCode}
+			if callAPI(lib.LibCode, isbn) {
+				ch <- lib
 			}
-		}(library.LibCode)
+		}(library)
 	}
 
 	go func() {
