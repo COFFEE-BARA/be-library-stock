@@ -11,11 +11,11 @@ phases:
     commands:
       - echo Building the Docker image...          
       - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
-      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG      
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG 629515838455.dkr.ecr.ap-northeast-2.amazonaws.com/smwu-004-ecr-get-lending-library:latest
   post_build:
     commands:
       - echo Pushing the Docker image...
-      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+      - docker push 629515838455.dkr.ecr.ap-northeast-2.amazonaws.com/smwu-004-ecr-get-lending-library:latest
       - aws lambda update-function-code --function-name smwu-004-get-lending-library --image-uri 629515838455.dkr.ecr.ap-northeast-2.amazonaws.com/smwu-004-ecr-get-lending-library:latest
       - echo Updating lambda function environment variables...
       - |
