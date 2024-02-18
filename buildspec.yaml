@@ -24,7 +24,7 @@ phases:
     commands:
       - echo Pushing the Docker image...
       - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
-      - aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --image-uri $IMAGE_URI:$IMAGE_TAG
+      - aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --image-uri 629515838455.dkr.ecr.ap-northeast-2.amazonaws.com/smwu-004-ecr-get-lending-library:latest
       - echo Updating lambda function environment variables...
       - |
         MAX_ATTEMPTS=10
