@@ -5,14 +5,12 @@ env:
     AWS_ACCOUNT_ID: "629515838455"
     IMAGE_REPO_NAME: "smwu-004-ecr-get-lending-library"
     IMAGE_TAG: "latest"
+    LAMBDA_FUNCTION_NAME: "smwu-004-get-lending-library"
+    IMAGE_URI: "629515838455.dkr.ecr.ap-northeast-2.amazonaws.com/smwu-004-ecr-get-lending-library:latest"
 phases:
   install:
     runtime-versions:
       golang: 1.17
-  build:
-    commands:
-      - echo "Building Go Lambda function"
-      - go build -o main
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
@@ -24,6 +22,23 @@ phases:
       - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG      
   post_build:
     commands:
-      - echo Build completed on `date`
       - echo Pushing the Docker image...
       - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+      - aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --image-uri $IMAGE_URI
+      - echo Updating lambda function environment variables...
+      - |
+        MAX_ATTEMPTS=10
+        ATTEMPT=0
+        FUNCTION_STATE=$(aws lambda get-function --function-name $LAMBDA_FUNCTION_NAME --query 'Configuration.State' --output text)
+        echo "Initial Lambda function state: $FUNCTION_STATE"
+        while [ "$FUNCTION_STATE" != "Active" ] && [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+          echo "Waiting for Lambda function to become Active... Attempt $((ATTEMPT+1))"
+          sleep 100
+          ATTEMPT=$((ATTEMPT+1))
+          FUNCTION_STATE=$(aws lambda get-function --function-name $LAMBDA_FUNCTION_NAME --query 'Configuration.State' --output text)
+          echo "Current Lambda function state: $FUNCTION_STATE"
+        done
+        if [ "$FUNCTION_STATE" == "Active" ]; then
+          echo "Lambda function is Active. Waiting additional time before proceeding with update..."
+          sleep 30
+        fi
