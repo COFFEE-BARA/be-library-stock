@@ -47,7 +47,7 @@ func main() {
 func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	lat := request.QueryStringParameters["lat"]
 	lon := request.QueryStringParameters["lon"]
-	isbn := request.QueryStringParameters["isbn"]
+	isbn := request.PathParameters["isbn"]
 
 	location := Location{
 		Latitude:  lat,
