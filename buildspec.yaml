@@ -1,12 +1,4 @@
 version: 0.2
-env:
-  variables:
-    AWS_DEFAULT_REGION: "ap-northeast-2"
-    AWS_ACCOUNT_ID: "629515838455"
-    IMAGE_REPO_NAME: "smwu-004-ecr-get-lending-library"
-    IMAGE_TAG: "latest"
-    LAMBDA_FUNCTION_NAME: "smwu-004-get-lending-library"
-    IMAGE_URI: "629515838455.dkr.ecr.ap-northeast-2.amazonaws.com/smwu-004-ecr-get-lending-library"
 phases:
   install:
     runtime-versions:
@@ -14,16 +6,16 @@ phases:
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
-      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
   build:
     commands:
       - echo Building the Docker image...          
       - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
-      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG      
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AREGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG      
   post_build:
     commands:
       - echo Pushing the Docker image...
-      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
       - aws lambda update-function-code --function-name smwu-004-get-lending-library --image-uri 629515838455.dkr.ecr.ap-northeast-2.amazonaws.com/smwu-004-ecr-get-lending-library:latest
       - echo Updating lambda function environment variables...
       - |
@@ -42,3 +34,4 @@ phases:
           echo "Lambda function is Active. Waiting additional time before proceeding with update..."
           sleep 30
         fi
+        - aws lambda update-function-configuration --function-name naver_book_crawler --environment "Variables={REGION=$REGION, AUTH_KEY=$AUTH_KEY, TABLE_NAME=$TABLE_NAME}"
