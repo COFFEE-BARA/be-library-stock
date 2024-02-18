@@ -34,4 +34,4 @@ phases:
           echo "Lambda function is Active. Waiting additional time before proceeding with update..."
           sleep 30
         fi
-        - aws lambda update-function-configuration --function-name smwu-004-get-lending-library --environment "Variables={REGION=$REGION, AUTH_KEY=$AUTH_KEY, TABLE_NAME=$TABLE_NAME}"
+      - aws lambda update-function-configuration --function-name smwu-004-get-lending-library --environment "Variables={REGION=$REGION, AUTH_KEY=$AUTH_KEY, TABLE_NAME=$TABLE_NAME}"
