@@ -122,9 +122,9 @@ func scanDynamoDB(sess *session.Session) (*dynamodb.ScanOutput, error) {
 func libraryHandler(result *dynamodb.ScanOutput, location Location, isbn string) []LibraryInfo {
 	var libraries []LibraryInfo
 	for _, item := range result.Items {
-		libCode := *item["libCode"].S
-		latitude := *item["latitude"].S
-		longitude := *item["longitude"].S
+		libCode := (*item["libCode"]).S
+		latitude := (*item["latitude"]).S
+		longitude := (*item["longitude"]).S
 		fmt.Println(libCode, latitude, longitude)
 		distance := calculateDistance(location, latitude, longitude)
 
