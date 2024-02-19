@@ -44,10 +44,6 @@ type Location struct {
 	Longitude string
 }
 
-func main() {
-	lambda.Start(EventHandler)
-}
-
 func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	// Set CORS headers
 	headers := map[string]string{
@@ -102,18 +98,16 @@ func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (e
 		Longitude: lon,
 	}
 
-	// loadEnv()
-
 	sess, err := createNewSession()
 	if err != nil {
 		log.Println("Error creating session:", err)
-		return events.APIGatewayProxyResponse{StatusCode: 500}, err
+		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
 	}
 
 	result, err := scanDynamoDB(sess)
 	if err != nil {
 		log.Println(err)
-		return events.APIGatewayProxyResponse{StatusCode: 500}, err
+		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
 	}
 
 	libraries := libraryHandler(result, location, isbn)
@@ -121,24 +115,15 @@ func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (e
 	responseBody, err := json.Marshal(libraries)
 	if err != nil {
 		log.Println("Error marshalling JSON:", err)
-		return events.APIGatewayProxyResponse{StatusCode: 500}, err
+		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
 	}
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: 200,
-		Headers: map[string]string{
-			"Content-Type": "application/json",
-		},
-		Body: string(responseBody),
+		Headers:    headers,
+		Body:       string(responseBody),
 	}, nil
 }
-
-// func loadEnv() {
-// 	err := godotenv.Load()
-// 	if err != nil {
-// 		log.Fatal("Error loading .env file")
-// 	}
-// }
 
 func createNewSession() (*session.Session, error) {
 	sess, err := session.NewSession(&aws.Config{
@@ -271,4 +256,33 @@ func callAPIs(libraries []LibraryInfo, isbn string) []LibraryInfo {
 	}
 
 	return loanAvailableLibraries
+}
+
+func main() {
+	// // 람다
+	// lambda.Start(EventHandler)
+
+	//test~~~~~~~~~~~~~~~~~~~~~~~~~~
+	testEventFile, err := os.Open("test-event.json")
+	if err != nil {
+		log.Fatalf("Error opening test event file: %s", err)
+	}
+	defer testEventFile.Close()
+
+	// Decode the test event JSON
+	var testEvent events.APIGatewayProxyRequest
+	err = json.NewDecoder(testEventFile).Decode(&testEvent)
+	if err != nil {
+		log.Fatalf("Error decoding test event JSON: %s", err)
+	}
+
+	// Invoke the Lambda handler function with the test event
+	response, err := EventHandler(context.Background(), testEvent)
+	if err != nil {
+		log.Fatalf("Error invoking Lambda handler: %s", err)
+	}
+
+	// Print the response
+	fmt.Printf("%v\n", response.StatusCode)
+	fmt.Printf("%v\n", response.Body)
 }
