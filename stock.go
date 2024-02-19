@@ -56,6 +56,12 @@ type Location struct {
 }
 
 func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	//0. 환경변수
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	// Set CORS headers
 	headers := map[string]string{
 		"Access-Control-Allow-Origin":  "*", // Allow requests from any origin
