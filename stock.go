@@ -24,10 +24,16 @@ import (
 )
 
 type Response struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+	Code    int           `json:"code"`
+	Message string        `json:"message"`
+	Data    *ResponseData `json:"data"`
 }
 
+type ResponseData struct {
+	Isbn        string        `json:"isbn"`
+	Title       string        `json:"title"`
+	LibraryList []LibraryInfo `json:"libraryList"`
+}
 type BookExistResponse struct {
 	XMLName xml.Name `xml:"response"`
 	Result  Result   `xml:"result"`
@@ -38,9 +44,10 @@ type Result struct {
 }
 
 type LibraryInfo struct {
-	LibCode   string
-	Latitude  string
-	Longitude string
+	LibCode   string `json:"code"`
+	LibName   string `json:"name"`
+	Latitude  string `json:"latitude"`
+	Longitude string `json:"longtitude"`
 }
 
 type Location struct {
