@@ -129,30 +129,35 @@ func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (e
 		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
 	}
 
+	//4. dynamoDB에서 도서관정봅가져오기
 	sess, err := createNewSession()
 	if err != nil {
 		log.Println("Error creating session:", err)
 		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
 	}
-
 	result, err := scanDynamoDB(sess)
 	if err != nil {
 		log.Println(err)
 		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
 	}
 
+	//5. 도서관 api 돌려서 대출가능한 도서관 가져오기
 	libraries := libraryHandler(result, location, isbn)
 
-	responseBody, err := json.Marshal(libraries)
-	if err != nil {
-		log.Println("Error marshalling JSON:", err)
-		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
-	}
+	bodyJson, err := json.Marshal(Response{
+		Code:    200,
+		Message: "책의 대출 가능 도서관 리스트를 가져오는데 성공했습니다.",
+		Data: &ResponseData{
+			Isbn:        isbn,
+			Title:       title,
+			LibraryList: libraries,
+		},
+	})
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: 200,
 		Headers:    headers,
-		Body:       string(responseBody),
+		Body:       string(bodyJson),
 	}, nil
 }
 
@@ -259,16 +264,19 @@ func libraryHandler(result *dynamodb.ScanOutput, location Location, isbn string)
 		libCode := *item["libCode"].S
 		latitude := *item["latitude"].S
 		longitude := *item["longitude"].S
-		fmt.Println(libCode, latitude, longitude)
+		libName := *item["libName"].S
+
 		distance := calculateDistance(location, latitude, longitude)
 
-		if distance <= 30 {
+		if distance <= 15 {
 			libInfo := LibraryInfo{
 				LibCode:   libCode,
+				LibName:   libName,
 				Latitude:  latitude,
 				Longitude: longitude,
 			}
 			libraries = append(libraries, libInfo)
+
 		}
 
 	}
