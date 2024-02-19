@@ -115,6 +115,20 @@ func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (e
 		Longitude: lon,
 	}
 
+	//3. escloud에서 책이름 가져오기
+
+	esClient, err := connectElasticSearch(os.Getenv("CLOUD_ID"), os.Getenv("API_KEY"))
+	if err != nil {
+		fmt.Println("Error connecting to Elasticsearch:", err)
+		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
+	}
+	//3.1 isbn 값으로 검색하기
+	title, err := searchTitle(esClient, os.Getenv("INDEX_NAME"), os.Getenv("FIELD_NAME"), isbn)
+	if err != nil {
+		fmt.Println("인덱스 검색 중 오류 발생:", err)
+		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
+	}
+
 	sess, err := createNewSession()
 	if err != nil {
 		log.Println("Error creating session:", err)
@@ -142,7 +156,78 @@ func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (e
 	}, nil
 }
 
+func connectElasticSearch(CLOUD_ID, API_KEY string) (*elasticsearch.Client, error) {
+	config := elasticsearch.Config{
+		CloudID: CLOUD_ID,
+		APIKey:  API_KEY,
+	}
+
+	es, err := elasticsearch.NewClient(config)
+	if err != nil {
+		fmt.Print(err)
+		return nil, err
+	}
+
+	fmt.Print("엘라스틱 클라이언트 : ", es)
+
+	// Elasticsearch 서버에 핑을 보내 연결을 테스트합니다.
+	res, err := es.Ping()
+	if err != nil {
+		fmt.Println("Elasticsearch와 연결 중 오류 발생:", err)
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	fmt.Println("Elasticsearch 클라이언트가 성공적으로 연결되었습니다.")
+
+	return es, nil
+
+}
+
+func searchTitle(es *elasticsearch.Client, indexName, fieldName, value string) (string, error) {
+
+	//검색 쿼리 작성
+	query := map[string]interface{}{
+		"query": map[string]interface{}{
+			"match": map[string]interface{}{
+				fieldName: value,
+			},
+		},
+	}
+
+	// 쿼리를 JSON으로 변환합니다.
+	queryJSON, err := json.Marshal(query)
+	if err != nil {
+		return "", err
+	}
+
+	// 검색 요청을 수행합니다.
+	res, err := es.Search(
+		es.Search.WithContext(context.Background()),
+		es.Search.WithIndex(indexName),
+		es.Search.WithBody(bytes.NewReader(queryJSON)),
+	)
+	if err != nil {
+		return "", err
+	}
+
+	// 검색 응답을 디코딩합니다.
+	var searchResponse map[string]interface{}
+	if err := json.NewDecoder(res.Body).Decode(&searchResponse); err != nil {
+		fmt.Println("검색 응답 디코딩 중 오류 발생:", err)
+		return "", err
+	}
+
+	// 히트를 추출하고 후 저장
+	hits := searchResponse["hits"].(map[string]interface{})["hits"].([]interface{})
+	temp := hits[0].(map[string]interface{})["_source"].(map[string]interface{})
+
+	return temp["Title"].(string), nil
+
+}
+
 func createNewSession() (*session.Session, error) {
+
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(os.Getenv("REGION")),
 	})
