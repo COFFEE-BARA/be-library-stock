@@ -20,6 +20,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
 
+type Response struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
 type BookExistResponse struct {
 	XMLName xml.Name `xml:"response"`
 	Result  Result   `xml:"result"`
@@ -45,10 +50,53 @@ func main() {
 }
 
 func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	lat := request.QueryStringParameters["lat"]
-	lon := request.QueryStringParameters["lon"]
-	// isbn := request.PathParameters["isbn"]
-	isbn := "9788956609959"
+	// Set CORS headers
+	headers := map[string]string{
+		"Access-Control-Allow-Origin":  "*", // Allow requests from any origin
+		"Access-Control-Allow-Headers": "Content-Type",
+		"Access-Control-Allow-Methods": "*", // Allow all methods
+		// Add more CORS headers if needed
+	}
+
+	// 1. url path paramether로 isbn 값 받아오기
+	isbn, ok := request.PathParameters["isbn"]
+	if !ok {
+		bodyJSON, err := json.Marshal(Response{
+			Code:    400,
+			Message: "isbn값이 없습니다.",
+		})
+		if err != nil {
+			return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
+		}
+
+		// Return the response
+		return events.APIGatewayProxyResponse{
+			StatusCode: 400,
+			Headers:    headers,
+			Body:       string(bodyJSON),
+		}, nil
+	}
+
+	//2. url  쿼리 파라미터 값 받아오기
+	lat, latOk := request.QueryStringParameters["lat"]
+	lon, lonOk := request.QueryStringParameters["lon"]
+	if !(latOk && lonOk) {
+		bodyJSON, err := json.Marshal(Response{
+			Code:    400,
+			Message: "lat 또는 lon값이 없습니다.",
+		})
+		if err != nil {
+			return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
+		}
+
+		// Return the response
+		return events.APIGatewayProxyResponse{
+			StatusCode: 400,
+			Headers:    headers,
+			Body:       string(bodyJSON),
+		}, nil
+
+	}
 
 	location := Location{
 		Latitude:  lat,
