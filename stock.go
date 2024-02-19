@@ -369,30 +369,30 @@ func callAPIs(libraries []LibraryInfo, isbn string) []LibraryInfo {
 }
 
 func main() {
-	// // 람다
-	// lambda.Start(EventHandler)
+	// 람다
+	lambda.Start(EventHandler)
 
-	//test~~~~~~~~~~~~~~~~~~~~~~~~~~
-	testEventFile, err := os.Open("test-event.json")
-	if err != nil {
-		log.Fatalf("Error opening test event file: %s", err)
-	}
-	defer testEventFile.Close()
+	// //test~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// testEventFile, err := os.Open("test-event.json")
+	// if err != nil {
+	// 	log.Fatalf("Error opening test event file: %s", err)
+	// }
+	// defer testEventFile.Close()
 
-	// Decode the test event JSON
-	var testEvent events.APIGatewayProxyRequest
-	err = json.NewDecoder(testEventFile).Decode(&testEvent)
-	if err != nil {
-		log.Fatalf("Error decoding test event JSON: %s", err)
-	}
+	// // Decode the test event JSON
+	// var testEvent events.APIGatewayProxyRequest
+	// err = json.NewDecoder(testEventFile).Decode(&testEvent)
+	// if err != nil {
+	// 	log.Fatalf("Error decoding test event JSON: %s", err)
+	// }
 
-	// Invoke the Lambda handler function with the test event
-	response, err := EventHandler(context.Background(), testEvent)
-	if err != nil {
-		log.Fatalf("Error invoking Lambda handler: %s", err)
-	}
+	// // Invoke the Lambda handler function with the test event
+	// response, err := EventHandler(context.Background(), testEvent)
+	// if err != nil {
+	// 	log.Fatalf("Error invoking Lambda handler: %s", err)
+	// }
 
-	// Print the response
-	fmt.Printf("%v\n", response.StatusCode)
-	fmt.Printf("%v\n", response.Body)
+	// // Print the response
+	// fmt.Printf("%v\n", response.StatusCode)
+	// fmt.Printf("%v\n", response.Body)
 }
