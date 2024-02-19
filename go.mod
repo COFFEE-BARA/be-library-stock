@@ -3,7 +3,7 @@ module be-library-stock
 go 1.20
 
 require (
-	github.com/aws/aws-sdk-go v1.50.16
+	github.com/aws/aws-sdk-go v1.50.20
 	github.com/joho/godotenv v1.5.1
 )
 
