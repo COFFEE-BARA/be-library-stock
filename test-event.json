@@ -3,8 +3,8 @@
     "isbn": "9791140708116"
   },
   "queryStringParameters": {
-    "lat": "40.7128",
-    "long": "-74.0060"
+    "lat": "37.5664056",
+    "lon": "126.9778222"
   },
   "headers": null,
   "multiValueHeaders": null,
