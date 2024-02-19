@@ -48,7 +48,7 @@ func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (e
 	lat := request.QueryStringParameters["lat"]
 	lon := request.QueryStringParameters["lon"]
 	// isbn := request.PathParameters["isbn"]
-	isbn := "9788956609959"
+	// isbn := "9788956609959"
 
 	location := Location{
 		Latitude:  lat,
@@ -122,9 +122,9 @@ func scanDynamoDB(sess *session.Session) (*dynamodb.ScanOutput, error) {
 func libraryHandler(result *dynamodb.ScanOutput, location Location, isbn string) []LibraryInfo {
 	var libraries []LibraryInfo
 	for _, item := range result.Items {
-		libCode := (*item["libCode"]).S
-		latitude := (*item["latitude"]).S
-		longitude := (*item["longitude"]).S
+		libCode := *item["libCode"].S
+		latitude := *item["latitude"].S
+		longitude := *item["longitude"].S
 		fmt.Println(libCode, latitude, longitude)
 		distance := calculateDistance(location, latitude, longitude)
 
