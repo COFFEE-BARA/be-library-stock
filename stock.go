@@ -14,6 +14,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -30,12 +31,13 @@ type Response struct {
 }
 
 type ResponseData struct {
-	Isbn string `json:"isbn"`
-	//Title       string        `json:"title"`
+	Isbn        string        `json:"isbn"`
+	Title       string        `json:"title"`
 	LibraryList []LibraryInfo `json:"libraryList"`
 }
 type BookExistResponse struct {
 	XMLName xml.Name `xml:"response"`
+	Error   string   `xml:"error"`
 	Result  Result   `xml:"result"`
 }
 
@@ -56,6 +58,9 @@ type Location struct {
 }
 
 func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	//실행시간 측정
+	start := time.Now()
+
 	// Set CORS headers
 	headers := map[string]string{
 		"Access-Control-Allow-Origin":  "*", // Allow requests from any origin
@@ -64,16 +69,16 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		// Add more CORS headers if needed
 	}
 
-	// //0. 환경변수
-	// err := godotenv.Load(".env")
-	// if err != nil {
-	// 	log.Fatal("Error loading .env file")
-	// }
+	//0. 환경변수
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 
-	// CLOUD_ID := os.Getenv("CLOUD_ID")
-	// API_KEY := os.Getenv("API_KEY")
-	// INDEX_NAME := os.Getenv("INDEX_NAME")
-	// FIELD_NAME := os.Getenv("FIELD_NAME")
+	CLOUD_ID := os.Getenv("CLOUD_ID")
+	API_KEY := os.Getenv("API_KEY")
+	INDEX_NAME := os.Getenv("INDEX_NAME")
+	FIELD_NAME := os.Getenv("FIELD_NAME")
 
 	REGION := os.Getenv("REGION")
 	TABLE_NAME := os.Getenv("TABLE_NAME")
@@ -96,6 +101,11 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	authKeyList = append(authKeyList, AUTH_KEY_YG)
 	authKeyList = append(authKeyList, AUTH_KEY_YJ)
 	authKeyList = append(authKeyList, AUTH_KEY_DY)
+
+	//환경변수 로드 시간측정
+	step1 := time.Since(start)
+	log.Printf("환경변수 로드 시간측정 : %s", step1)
+	start = time.Now()
 
 	// 1. url path paramether로 isbn 값 받아오기
 	isbn, ok := request.PathParameters["isbn"]
@@ -141,20 +151,27 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		Latitude:  lat,
 		Longitude: lon,
 	}
+	//쿼리 파라미터 로드 시간측정
+	step2 := time.Since(start)
+	log.Printf("쿼리 파라미터 로드 시간측정 : %s", step2)
+	start = time.Now()
 
 	//3. escloud에서 책이름 가져오기
-
-	// esClient, err := connectElasticSearch(CLOUD_ID, API_KEY)
-	// if err != nil {
-	// 	fmt.Println("Error connecting to Elasticsearch:", err)
-	// 	return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
-	// }
-	// //3.1 isbn 값으로 검색하기
-	// title, err := searchTitle(esClient, INDEX_NAME, FIELD_NAME, isbn)
-	// if err != nil {
-	// 	fmt.Println("인덱스 검색 중 오류 발생:", err)
-	// 	return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
-	// }
+	esClient, err := connectElasticSearch(CLOUD_ID, API_KEY)
+	if err != nil {
+		fmt.Println("Error connecting to Elasticsearch:", err)
+		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
+	}
+	//3.1 isbn 값으로 검색하기
+	title, err := searchTitle(esClient, INDEX_NAME, FIELD_NAME, isbn)
+	if err != nil {
+		fmt.Println("인덱스 검색 중 오류 발생:", err)
+		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
+	}
+	//es cloud 연결및 책 이름 검색
+	step3 := time.Since(start)
+	log.Printf("es cloud 연결및 책 이름 검색 시간측정 : %s", step3)
+	start = time.Now()
 
 	//4. dynamoDB에서 도서관정봅가져오기
 	sess, err := createNewSession(REGION)
@@ -167,6 +184,10 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		log.Println(err)
 		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
 	}
+	//다이나모 디비 연결및 도서관 스캐닝
+	step4 := time.Since(start)
+	log.Printf("다이나모 디비 연결및 도서관 스캐닝 시간측정 : %s", step4)
+	start = time.Now()
 
 	//5. 도서관 api 돌려서 대출가능한 도서관 가져오기
 	libraries, err := libraryHandler(result, location, isbn, authKeyList, FLOAT_DISTANCE)
@@ -174,13 +195,17 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		log.Println(err)
 		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
 	}
+	//도서나루 api 돌려오기
+	step5 := time.Since(start)
+	log.Printf("도서나루 api 돌려오기 시간측정 : %s", step5)
+	start = time.Now()
 
 	bodyJson, err := json.Marshal(Response{
 		Code:    200,
 		Message: "책의 대출 가능 도서관 리스트를 가져오는데 성공했습니다.",
 		Data: &ResponseData{
-			Isbn: isbn,
-			//Title:       title,
+			Isbn:        isbn,
+			Title:       title,
 			LibraryList: libraries,
 		},
 	})
