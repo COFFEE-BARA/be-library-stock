@@ -56,6 +56,14 @@ type Location struct {
 }
 
 func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	// Set CORS headers
+	headers := map[string]string{
+		"Access-Control-Allow-Origin":  "*", // Allow requests from any origin
+		"Access-Control-Allow-Headers": "Content-Type",
+		"Access-Control-Allow-Methods": "*", // Allow all methods
+		// Add more CORS headers if needed
+	}
+
 	// //0. 환경변수
 	// err := godotenv.Load(".env")
 	// if err != nil {
@@ -81,14 +89,6 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	authKeyList = append(authKeyList, AUTH_KEY_YG)
 	authKeyList = append(authKeyList, AUTH_KEY_YJ)
 	authKeyList = append(authKeyList, AUTH_KEY_DY)
-
-	// Set CORS headers
-	headers := map[string]string{
-		"Access-Control-Allow-Origin":  "*", // Allow requests from any origin
-		"Access-Control-Allow-Headers": "Content-Type",
-		"Access-Control-Allow-Methods": "*", // Allow all methods
-		// Add more CORS headers if needed
-	}
 
 	// 1. url path paramether로 isbn 값 받아오기
 	isbn, ok := request.PathParameters["isbn"]
