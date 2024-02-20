@@ -77,6 +77,13 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 
 	REGION := os.Getenv("REGION")
 	TABLE_NAME := os.Getenv("TABLE_NAME")
+	DISTANCE := os.Getenv("DISTANCE")
+
+	FLOAT_DISTANCE, err := strconv.ParseFloat(DISTANCE, 64)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
+	}
 
 	AUTH_KEY_SH := os.Getenv("AUTH_KEY_SH")
 	AUTH_KEY_YG := os.Getenv("AUTH_KEY_YG")
@@ -162,7 +169,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	}
 
 	//5. 도서관 api 돌려서 대출가능한 도서관 가져오기
-	libraries, err := libraryHandler(result, location, isbn, authKeyList)
+	libraries, err := libraryHandler(result, location, isbn, authKeyList, FLOAT_DISTANCE)
 	if err != nil {
 		log.Println(err)
 		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
@@ -282,7 +289,7 @@ func scanDynamoDB(sess *session.Session, TABLE_NAME string) (*dynamodb.ScanOutpu
 	return result, nil
 }
 
-func libraryHandler(result *dynamodb.ScanOutput, location Location, isbn string, authKeyList []string) ([]LibraryInfo, error) {
+func libraryHandler(result *dynamodb.ScanOutput, location Location, isbn string, authKeyList []string, DISTANCE float64) ([]LibraryInfo, error) {
 	var libraries []LibraryInfo
 	for _, item := range result.Items {
 		libCode := *item["libCode"].S
@@ -292,7 +299,7 @@ func libraryHandler(result *dynamodb.ScanOutput, location Location, isbn string,
 
 		distance := calculateDistance(location, latitude, longitude)
 
-		if distance <= 10 {
+		if distance <= DISTANCE {
 			libInfo := LibraryInfo{
 				LibCode:   libCode,
 				LibName:   libName,
