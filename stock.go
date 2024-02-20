@@ -56,7 +56,7 @@ type Location struct {
 	Longitude string
 }
 
-func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	//0. 환경변수
 	err := godotenv.Load(".env")
 	if err != nil {
@@ -413,7 +413,7 @@ func callAPIs(libraries []LibraryInfo, isbn string, authKeyList []string) ([]Lib
 
 func main() {
 	// 람다
-	lambda.Start(EventHandler)
+	lambda.Start(handler)
 
 	// //test~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// testEventFile, err := os.Open("test-event.json")
