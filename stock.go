@@ -17,11 +17,11 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/elastic/go-elasticsearch/v8"
-	"github.com/joho/godotenv"
 )
 
 type Response struct {
@@ -69,11 +69,11 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		// Add more CORS headers if needed
 	}
 
-	//0. 환경변수
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	// //0. 환경변수
+	// err := godotenv.Load(".env")
+	// if err != nil {
+	// 	log.Fatal("Error loading .env file")
+	// }
 
 	CLOUD_ID := os.Getenv("CLOUD_ID")
 	API_KEY := os.Getenv("API_KEY")
@@ -468,30 +468,30 @@ func callAPIs(libraries []LibraryInfo, isbn string, authKeyList []string) ([]Lib
 }
 
 func main() {
-	// // 람다
-	// lambda.Start(handler)
+	// 람다
+	lambda.Start(handler)
 
-	//test~~~~~~~~~~~~~~~~~~~~~~~~~~
-	testEventFile, err := os.Open("test-event.json")
-	if err != nil {
-		log.Fatalf("Error opening test event file: %s", err)
-	}
-	defer testEventFile.Close()
+	// //test~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// testEventFile, err := os.Open("test-event.json")
+	// if err != nil {
+	// 	log.Fatalf("Error opening test event file: %s", err)
+	// }
+	// defer testEventFile.Close()
 
-	// Decode the test event JSON
-	var testEvent events.APIGatewayProxyRequest
-	err = json.NewDecoder(testEventFile).Decode(&testEvent)
-	if err != nil {
-		log.Fatalf("Error decoding test event JSON: %s", err)
-	}
+	// // Decode the test event JSON
+	// var testEvent events.APIGatewayProxyRequest
+	// err = json.NewDecoder(testEventFile).Decode(&testEvent)
+	// if err != nil {
+	// 	log.Fatalf("Error decoding test event JSON: %s", err)
+	// }
 
-	// Invoke the Lambda handler function with the test event
-	response, err := handler(context.Background(), testEvent)
-	if err != nil {
-		log.Fatalf("Error invoking Lambda handler: %s", err)
-	}
+	// // Invoke the Lambda handler function with the test event
+	// response, err := handler(context.Background(), testEvent)
+	// if err != nil {
+	// 	log.Fatalf("Error invoking Lambda handler: %s", err)
+	// }
 
-	// Print the response
-	fmt.Printf("%v\n", response.StatusCode)
-	fmt.Printf("%v\n", response.Body)
+	// // Print the response
+	// fmt.Printf("%v\n", response.StatusCode)
+	// fmt.Printf("%v\n", response.Body)
 }
