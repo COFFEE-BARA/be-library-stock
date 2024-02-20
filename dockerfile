@@ -1,4 +1,4 @@
-FROM golang:1.16 AS builder
+FROM golang:1.20 AS builder
 WORKDIR /app
 COPY . .
 RUN go mod download
@@ -9,3 +9,4 @@ RUN apk --no-cache add ca-certificates
 COPY --from=builder /app/main /main
 
 CMD ["/main"]
+
