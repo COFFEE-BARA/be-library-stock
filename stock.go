@@ -17,11 +17,11 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/joho/godotenv"
 )
 
 type Response struct {
@@ -393,12 +393,18 @@ func callAPI(libCode string, isbn string, authKeyList []string) (bool, error) {
 			log.Fatal("Error parsing XML:", err)
 		}
 
-		if bookExistResponse.Result.LoanAvailable == "Y" {
-			return true, nil
-		} else if bookExistResponse.Result.LoanAvailable == "N" {
-			return false, nil
-		} else {
+		if bookExistResponse.Error != "" {
 			continue
+		} else {
+			if bookExistResponse.Result.LoanAvailable != "" {
+				if bookExistResponse.Result.LoanAvailable == "Y" {
+					return true, nil
+				} else if bookExistResponse.Result.LoanAvailable == "N" {
+					return false, nil
+				} else {
+					break
+				}
+			}
 		}
 
 	}
@@ -408,66 +414,84 @@ func callAPI(libCode string, isbn string, authKeyList []string) (bool, error) {
 }
 
 func callAPIs(libraries []LibraryInfo, isbn string, authKeyList []string) ([]LibraryInfo, error) {
+	// 결과를 전송할 채널 생성
 	ch := make(chan LibraryInfo)
+	errCh := make(chan error)
 
+	// WaitGroup 생성
 	var wg sync.WaitGroup
 	for _, library := range libraries {
 		wg.Add(1)
 
-		go func(lib LibraryInfo) error {
+		// 각 라이브러리에 대한 병렬 처리
+		go func(lib LibraryInfo) {
 			defer wg.Done()
 
+			// callAPI 함수 호출하여 대출 가능 여부 확인
 			flag, err := callAPI(lib.LibCode, isbn, authKeyList)
 			if err != nil {
-				return err
+				// 에러 발생 시 에러 채널에 에러 전달
+				errCh <- err
+				return
 			}
+			// 대출 가능한 경우 채널에 라이브러리 정보 전달
 			if flag {
 				ch <- lib
 			}
-			return nil
 		}(library)
 	}
 
+	// 고루틴 종료를 기다리고 모든 채널을 닫음
 	go func() {
 		wg.Wait()
 		close(ch)
+		close(errCh)
 	}()
 
+	// 대출 가능한 도서관 정보를 수집
 	var loanAvailableLibraries []LibraryInfo
-	for libInfo := range ch {
-		if libInfo.LibCode != "" {
-			loanAvailableLibraries = append(loanAvailableLibraries, libInfo)
+	for {
+		select {
+		case libInfo, ok := <-ch:
+			if !ok {
+				// 채널이 닫혔으면 반환
+				return loanAvailableLibraries, nil
+			}
+			if libInfo.LibCode != "" {
+				loanAvailableLibraries = append(loanAvailableLibraries, libInfo)
+			}
+		case err := <-errCh:
+			// 에러 발생 시 바로 반환
+			return nil, err
 		}
 	}
-
-	return loanAvailableLibraries, nil
 }
 
 func main() {
-	// 람다
-	lambda.Start(handler)
+	// // 람다
+	// lambda.Start(handler)
 
-	// //test~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// testEventFile, err := os.Open("test-event.json")
-	// if err != nil {
-	// 	log.Fatalf("Error opening test event file: %s", err)
-	// }
-	// defer testEventFile.Close()
+	//test~~~~~~~~~~~~~~~~~~~~~~~~~~
+	testEventFile, err := os.Open("test-event.json")
+	if err != nil {
+		log.Fatalf("Error opening test event file: %s", err)
+	}
+	defer testEventFile.Close()
 
-	// // Decode the test event JSON
-	// var testEvent events.APIGatewayProxyRequest
-	// err = json.NewDecoder(testEventFile).Decode(&testEvent)
-	// if err != nil {
-	// 	log.Fatalf("Error decoding test event JSON: %s", err)
-	// }
+	// Decode the test event JSON
+	var testEvent events.APIGatewayProxyRequest
+	err = json.NewDecoder(testEventFile).Decode(&testEvent)
+	if err != nil {
+		log.Fatalf("Error decoding test event JSON: %s", err)
+	}
 
-	// // Invoke the Lambda handler function with the test event
-	// response, err := handler(context.Background(), testEvent)
-	// if err != nil {
-	// 	log.Fatalf("Error invoking Lambda handler: %s", err)
-	// }
+	// Invoke the Lambda handler function with the test event
+	response, err := handler(context.Background(), testEvent)
+	if err != nil {
+		log.Fatalf("Error invoking Lambda handler: %s", err)
+	}
 
-	// // Print the response
-	// fmt.Printf("%v\n", response.StatusCode)
-	// fmt.Printf("%v\n", response.Body)
+	// Print the response
+	fmt.Printf("%v\n", response.StatusCode)
+	fmt.Printf("%v\n", response.Body)
 }
