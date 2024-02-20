@@ -21,7 +21,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/elastic/go-elasticsearch/v8"
-	"github.com/joho/godotenv"
 )
 
 type Response struct {
@@ -31,8 +30,8 @@ type Response struct {
 }
 
 type ResponseData struct {
-	Isbn        string        `json:"isbn"`
-	Title       string        `json:"title"`
+	Isbn string `json:"isbn"`
+	//Title       string        `json:"title"`
 	LibraryList []LibraryInfo `json:"libraryList"`
 }
 type BookExistResponse struct {
@@ -57,16 +56,17 @@ type Location struct {
 }
 
 func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	//0. 환경변수
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	// //0. 환경변수
+	// err := godotenv.Load(".env")
+	// if err != nil {
+	// 	log.Fatal("Error loading .env file")
+	// }
 
-	CLOUD_ID := os.Getenv("CLOUD_ID")
-	API_KEY := os.Getenv("API_KEY")
-	INDEX_NAME := os.Getenv("INDEX_NAME")
-	FIELD_NAME := os.Getenv("FIELD_NAME")
+	// CLOUD_ID := os.Getenv("CLOUD_ID")
+	// API_KEY := os.Getenv("API_KEY")
+	// INDEX_NAME := os.Getenv("INDEX_NAME")
+	// FIELD_NAME := os.Getenv("FIELD_NAME")
+
 	REGION := os.Getenv("REGION")
 	TABLE_NAME := os.Getenv("TABLE_NAME")
 
@@ -137,17 +137,17 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 
 	//3. escloud에서 책이름 가져오기
 
-	esClient, err := connectElasticSearch(CLOUD_ID, API_KEY)
-	if err != nil {
-		fmt.Println("Error connecting to Elasticsearch:", err)
-		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
-	}
-	//3.1 isbn 값으로 검색하기
-	title, err := searchTitle(esClient, INDEX_NAME, FIELD_NAME, isbn)
-	if err != nil {
-		fmt.Println("인덱스 검색 중 오류 발생:", err)
-		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
-	}
+	// esClient, err := connectElasticSearch(CLOUD_ID, API_KEY)
+	// if err != nil {
+	// 	fmt.Println("Error connecting to Elasticsearch:", err)
+	// 	return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
+	// }
+	// //3.1 isbn 값으로 검색하기
+	// title, err := searchTitle(esClient, INDEX_NAME, FIELD_NAME, isbn)
+	// if err != nil {
+	// 	fmt.Println("인덱스 검색 중 오류 발생:", err)
+	// 	return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
+	// }
 
 	//4. dynamoDB에서 도서관정봅가져오기
 	sess, err := createNewSession(REGION)
@@ -172,8 +172,8 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		Code:    200,
 		Message: "책의 대출 가능 도서관 리스트를 가져오는데 성공했습니다.",
 		Data: &ResponseData{
-			Isbn:        isbn,
-			Title:       title,
+			Isbn: isbn,
+			//Title:       title,
 			LibraryList: libraries,
 		},
 	})
@@ -430,7 +430,7 @@ func main() {
 	// }
 
 	// // Invoke the Lambda handler function with the test event
-	// response, err := EventHandler(context.Background(), testEvent)
+	// response, err := handler(context.Background(), testEvent)
 	// if err != nil {
 	// 	log.Fatalf("Error invoking Lambda handler: %s", err)
 	// }
