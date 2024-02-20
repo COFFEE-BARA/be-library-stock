@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -142,7 +143,11 @@ func EventHandler(ctx context.Context, request events.APIGatewayProxyRequest) (e
 	}
 
 	//5. 도서관 api 돌려서 대출가능한 도서관 가져오기
-	libraries := libraryHandler(result, location, isbn)
+	libraries, err := libraryHandler(result, location, isbn)
+	if err != nil {
+		log.Println(err)
+		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
+	}
 
 	bodyJson, err := json.Marshal(Response{
 		Code:    200,
@@ -258,7 +263,7 @@ func scanDynamoDB(sess *session.Session) (*dynamodb.ScanOutput, error) {
 	return result, nil
 }
 
-func libraryHandler(result *dynamodb.ScanOutput, location Location, isbn string) []LibraryInfo {
+func libraryHandler(result *dynamodb.ScanOutput, location Location, isbn string) ([]LibraryInfo, error) {
 	var libraries []LibraryInfo
 	for _, item := range result.Items {
 		libCode := *item["libCode"].S
@@ -281,14 +286,17 @@ func libraryHandler(result *dynamodb.ScanOutput, location Location, isbn string)
 
 	}
 
-	var lib []LibraryInfo
-	lib = callAPIs(libraries, isbn)
+	//var lib []LibraryInfo
+	lib, err := callAPIs(libraries, isbn)
+	if err != nil {
+		return nil, err
+	}
 
 	// 프론트엔드에 전달할 라이브러리 정보 반환
 	fmt.Println("---result---")
 	fmt.Println(lib)
 	fmt.Println(len(lib))
-	return lib
+	return lib, nil
 }
 
 func calculateDistance(location Location, latitude string, longitude string) float64 {
@@ -313,43 +321,65 @@ func calculateDistance(location Location, latitude string, longitude string) flo
 	return distance
 }
 
-func callAPI(libCode string, isbn string) bool {
-	authKey := os.Getenv("AUTH_KEY")
-	apiURL := fmt.Sprintf("https://data4library.kr/api/bookExist?authKey=%s&libCode=%s&isbn13=%s", authKey, libCode, isbn)
+func callAPI(libCode string, isbn string) (bool, error) {
+	// 호출이 안되면 다른 auth_key로 두기
+	var authKeyList []string
+	authKeyList = append(authKeyList, os.Getenv("AUTH_KEY_SH"))
+	authKeyList = append(authKeyList, os.Getenv("AUTH_KEY_YG"))
+	authKeyList = append(authKeyList, os.Getenv("AUTH_KEY_YJ"))
+	authKeyList = append(authKeyList, os.Getenv("AUTH_KEY_DY"))
 
-	response, err := http.Get(apiURL)
-	if err != nil {
-		log.Fatal("Error fetching data from API:", err)
+	for _, authKey := range authKeyList {
+		apiURL := fmt.Sprintf("https://data4library.kr/api/bookExist?authKey=%s&libCode=%s&isbn13=%s", authKey, libCode, isbn)
+
+		response, err := http.Get(apiURL)
+		if err != nil {
+			log.Fatal("Error fetching data from API:", err)
+		}
+		defer response.Body.Close()
+
+		byteValue, _ := ioutil.ReadAll(response.Body)
+
+		var bookExistResponse BookExistResponse
+
+		err = xml.Unmarshal(byteValue, &bookExistResponse)
+
+		if err != nil {
+			log.Fatal("Error parsing XML:", err)
+		}
+
+		if bookExistResponse.Result.LoanAvailable == "Y" {
+			return true, nil
+		} else if bookExistResponse.Result.LoanAvailable == "N" {
+			return false, nil
+		} else {
+			continue
+		}
+
 	}
-	defer response.Body.Close()
 
-	byteValue, _ := ioutil.ReadAll(response.Body)
-
-	var bookExistResponse BookExistResponse
-
-	err = xml.Unmarshal(byteValue, &bookExistResponse)
-
-	if err != nil {
-		log.Fatal("Error parsing XML:", err)
-	}
-
-	return bookExistResponse.Result.LoanAvailable == "Y"
+	return false, errors.New("도서나루 API와 통신이 불가합니다.")
 
 }
 
-func callAPIs(libraries []LibraryInfo, isbn string) []LibraryInfo {
+func callAPIs(libraries []LibraryInfo, isbn string) ([]LibraryInfo, error) {
 	ch := make(chan LibraryInfo)
 
 	var wg sync.WaitGroup
 	for _, library := range libraries {
 		wg.Add(1)
 
-		go func(lib LibraryInfo) {
+		go func(lib LibraryInfo) error {
 			defer wg.Done()
 
-			if callAPI(lib.LibCode, isbn) {
+			flag, err := callAPI(lib.LibCode, isbn)
+			if err != nil {
+				return err
+			}
+			if flag {
 				ch <- lib
 			}
+			return nil
 		}(library)
 	}
 
@@ -365,7 +395,7 @@ func callAPIs(libraries []LibraryInfo, isbn string) []LibraryInfo {
 		}
 	}
 
-	return loanAvailableLibraries
+	return loanAvailableLibraries, nil
 }
 
 func main() {
