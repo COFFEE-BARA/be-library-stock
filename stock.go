@@ -292,7 +292,7 @@ func libraryHandler(result *dynamodb.ScanOutput, location Location, isbn string,
 
 		distance := calculateDistance(location, latitude, longitude)
 
-		if distance <= 15 {
+		if distance <= 10 {
 			libInfo := LibraryInfo{
 				LibCode:   libCode,
 				LibName:   libName,
