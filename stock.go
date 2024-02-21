@@ -70,6 +70,8 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	}
 
 	// //0. 환경변수
+
+	//test
 	// err := godotenv.Load(".env")
 	// if err != nil {
 	// 	log.Fatal("Error loading .env file")
@@ -90,17 +92,39 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		return events.APIGatewayProxyResponse{StatusCode: 500, Headers: headers}, err
 	}
 
-	AUTH_KEY_SH := os.Getenv("AUTH_KEY_SH")
-	AUTH_KEY_YG := os.Getenv("AUTH_KEY_YG")
-	AUTH_KEY_YJ := os.Getenv("AUTH_KEY_YJ")
-	AUTH_KEY_DY := os.Getenv("AUTH_KEY_DY")
+	AUTH_KEY_SH_1 := os.Getenv("AUTH_KEY_SH_1")
+	AUTH_KEY_SH_2 := os.Getenv("AUTH_KEY_SH_2")
+	AUTH_KEY_SH_3 := os.Getenv("AUTH_KEY_SH_3")
+
+	AUTH_KEY_YG_1 := os.Getenv("AUTH_KEY_YG_1")
+	AUTH_KEY_YG_2 := os.Getenv("AUTH_KEY_YG_2")
+
+	AUTH_KEY_YJ_1 := os.Getenv("AUTH_KEY_YJ_1")
+	AUTH_KEY_YJ_2 := os.Getenv("AUTH_KEY_YJ_2")
+	AUTH_KEY_YJ_3 := os.Getenv("AUTH_KEY_YJ_3")
+
+	AUTH_KEY_DY_1 := os.Getenv("AUTH_KEY_DY_1")
+	AUTH_KEY_DY_2 := os.Getenv("AUTH_KEY_DY_2")
+	AUTH_KEY_DY_3 := os.Getenv("AUTH_KEY_DY_3")
+	AUTH_KEY_DY_4 := os.Getenv("AUTH_KEY_DY_4")
 
 	// 호출이 안되면 다른 auth_key로 두기
 	var authKeyList []string
-	authKeyList = append(authKeyList, AUTH_KEY_SH)
-	authKeyList = append(authKeyList, AUTH_KEY_YG)
-	authKeyList = append(authKeyList, AUTH_KEY_YJ)
-	authKeyList = append(authKeyList, AUTH_KEY_DY)
+	authKeyList = append(authKeyList, AUTH_KEY_SH_1)
+	authKeyList = append(authKeyList, AUTH_KEY_SH_2)
+	authKeyList = append(authKeyList, AUTH_KEY_SH_3)
+
+	authKeyList = append(authKeyList, AUTH_KEY_YG_1)
+	authKeyList = append(authKeyList, AUTH_KEY_YG_2)
+
+	authKeyList = append(authKeyList, AUTH_KEY_YJ_1)
+	authKeyList = append(authKeyList, AUTH_KEY_YJ_2)
+	authKeyList = append(authKeyList, AUTH_KEY_YJ_3)
+
+	authKeyList = append(authKeyList, AUTH_KEY_DY_1)
+	authKeyList = append(authKeyList, AUTH_KEY_DY_2)
+	authKeyList = append(authKeyList, AUTH_KEY_DY_3)
+	authKeyList = append(authKeyList, AUTH_KEY_DY_4)
 
 	//환경변수 로드 시간측정
 	step1 := time.Since(start)
