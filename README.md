@@ -46,7 +46,7 @@ Content-Type: application/json
 | --- | --- | --- | --- |
 | 책의 { isbn 값 } | String | 책의 13자리 isbn 값 | Required |
 
-## ✌🏻Request Query
+## 🤟🏻Request Query
 
 | Name | Type | Description | Required |
 | --- | --- | --- | --- |
