@@ -1,10 +1,50 @@
-# 📚 Checkbara
-![checkbara1](https://github.com/COFFEE-BARA/be-library-stock/assets/72396865/5a3da8b6-009d-40f5-a3f8-a1561df83631)
-![checkbara2](https://github.com/COFFEE-BARA/be-library-stock/assets/72396865/eeef4f87-fb54-471b-bbba-2f9fac767823)
-![checkbara3](https://github.com/COFFEE-BARA/be-library-stock/assets/72396865/3a8da5c0-19ee-4251-9161-96a835ce0b3f)
-<img width="875" alt="checkbara4" src="https://github.com/COFFEE-BARA/be-library-stock/assets/72396865/fe97f585-7be6-4810-bc0a-f3c331ce9c39">
+# 📚 Checkbara 서비스 소개
+
+![image](https://github.com/COFFEE-BARA/crawler-kyobo-isbn/assets/65851554/aeecb4be-6f02-4bfd-a6e5-88df1ef87c8a)
+
+![image](https://github.com/COFFEE-BARA/crawler-kyobo-isbn/assets/65851554/9ad000e0-5c95-4799-9582-2c49ecd5232b)
+
 
 <br/>
+<br/>
+
+
+## 📹 시연영상
+### AI 책 추천
+
+![챗봇](https://github.com/COFFEE-BARA/crawler-kyobo-isbn/assets/65851554/a28f0cca-ae1f-46b9-a087-6ea18216bd9d)
+
+
+<br/>
+
+
+### 책 검색 & 서점 재고 확인 & 대출 가능 도서관 확인
+
+![__-ezgif com-resize](https://github.com/COFFEE-BARA/crawler-kyobo-isbn/assets/65851554/699d09a6-8691-4ca0-bab5-575340a3c34d)
+
+
+<br/>
+
+
+### 키바나 통계보기
+
+![통계](https://github.com/COFFEE-BARA/crawler-kyobo-isbn/assets/65851554/d4ac2392-57ff-406f-b03e-334c932d56ce)
+
+
+<br/>
+<br/>
+
+
+## 📡 발전 방향
+
+![image](https://github.com/COFFEE-BARA/crawler-kyobo-isbn/assets/65851554/d18f754c-773d-43b9-b961-7931703aaeb8)
+
+
+<br/>
+<br/>
+
+
+# 👥 팀원 소개
 
 | <img width="165" alt="suwha" src="https://github.com/COFFEE-BARA/be-bookstore-stock/assets/72396865/19e01fac-5384-4ec7-98f1-9e1e613429b4"> | <img width="165" alt="yoonju" src="https://github.com/COFFEE-BARA/be-bookstore-stock/assets/72396865/fb0a14c6-2d02-4105-962e-4565663817cc"> | <img width="165" alt="yugyeong" src="https://github.com/COFFEE-BARA/be-bookstore-stock/assets/72396865/90b7268d-92e5-43d1-9da8-ae48afd9e8c1"> | <img width="165" alt="dayeon" src="https://github.com/COFFEE-BARA/be-bookstore-stock/assets/72396865/f19e65e6-0856-4b6a-a355-993ce83ddcb7"> |
 | --- | --- | --- | --- |
