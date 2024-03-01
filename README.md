@@ -1,3 +1,19 @@
+# 📚 Checkbara
+![checkbara1](https://github.com/COFFEE-BARA/be-library-stock/assets/72396865/5a3da8b6-009d-40f5-a3f8-a1561df83631)
+![checkbara2](https://github.com/COFFEE-BARA/be-library-stock/assets/72396865/eeef4f87-fb54-471b-bbba-2f9fac767823)
+![checkbara3](https://github.com/COFFEE-BARA/be-library-stock/assets/72396865/3a8da5c0-19ee-4251-9161-96a835ce0b3f)
+<img width="875" alt="checkbara4" src="https://github.com/COFFEE-BARA/be-library-stock/assets/72396865/fe97f585-7be6-4810-bc0a-f3c331ce9c39">
+![checkbara5](https://github.com/COFFEE-BARA/be-library-stock/assets/72396865/ee924ade-8e39-481d-9eb6-70b833190a84)
+
+| [유수화](https://github.com/YuSuhwa-ve) | [송윤주](https://github.com/raminicano) | [현유경](https://github.com/yugyeongh) | [양다연](https://github.com/dayeon1201) |
+| --- | --- | --- | --- |
+
+<br/>
+
+# be-library-stock
+
+<br/>
+
 # 💿 Dynamo DB table 구조도
 
 | libCode (PK) | libName (SK) | latitude | longitude |
