@@ -67,13 +67,13 @@ Content-Type: application/json
 
 ```json
 {
-    "code": 200,
-    "message": "책의 대출 가능 도서관 리스트를 가져오는데 성공했습니다.",
-		"data": {
-				"isbn" : 9791140708116,
-				"title" : "아는 만큼 보이는 백엔드 개발 (한 권으로 보는 백엔드 로드맵과 커리어 가이드)",
-				"bookStoreList" : null
-				}
+  "code": 200,
+  "message": "책의 대출 가능 도서관 리스트를 가져오는데 성공했습니다.",
+    "data": {
+      "isbn" : 9791140708116,
+      "title" : "아는 만큼 보이는 백엔드 개발 (한 권으로 보는 백엔드 로드맵과 커리어 가이드)",
+      "bookStoreList" : null
+    }
 }
 ```
 
@@ -83,9 +83,9 @@ Content-Type: application/json
     
     ```json
     {
-        "code": 400,
-        "message": "isbn값이 없습니다.",
-    		"data": null
+      "code": 400,
+      "message": "isbn값이 없습니다.",
+      "data": null
     }
     ```
     
@@ -93,9 +93,9 @@ Content-Type: application/json
     
     ```json
     {
-        "code": 404,
-        "message": "없는 책입니다.",
-        "data": null
+      "code": 404,
+      "message": "없는 책입니다.",
+      "data": null
     }
     ```
     
@@ -103,9 +103,9 @@ Content-Type: application/json
     
     ```json
     {
-        "code": 500,
-        "message": "서버 에러",
-        "data": null
+      "code": 500,
+      "message": "서버 에러",
+      "data": null
     }
     ```
     
